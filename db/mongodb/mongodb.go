@@ -2,8 +2,10 @@ package mongodb
 
 import (
 	"errors"
+	"crypto/tls"
 	"flag"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"time"
@@ -37,9 +39,19 @@ type Mongo struct {
 
 // Init MongoDB
 func (m *Mongo) Init() error {
-	u := getURL()
 	var err error
-	m.Session, err = mgo.DialWithTimeout(u.String(), time.Duration(5)*time.Second)
+	// DialInfo holds options for establishing a session.
+	dialInfo := &mgo.DialInfo{
+		Addrs:    []string{host}, // Get HOST + PORT
+		Timeout:  60 * time.Second,
+		Database: db, // It can be anything
+		Username: name, // Username
+		Password: password, // Password
+		DialServer: func(addr *mgo.ServerAddr) (net.Conn, error) {
+				return tls.Dial("tcp", addr.String(), &tls.Config{})
+		},
+	}
+	m.Session, err = mgo.DialWithInfo(dialInfo)
 	if err != nil {
 		return err
 	}
